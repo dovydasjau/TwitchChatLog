@@ -37,6 +37,9 @@ def main():
     file_path = input("Enter the path to your .log file: ").strip()
     logs = load_logs(file_path)
 
+    total_logs = len(logs)
+    print(f"Total logs count: {total_logs}")
+
     print("\nHow would you like to sort the chat logs?")
     print("1 - Sort by time")
     print("2 - Filter by username")
@@ -54,7 +57,10 @@ def main():
     else:
         print("Invalid choice. Showing unsorted logs.")
 
-    print("\n--- Filtered Logs ---")
+    sorted_logs = len(logs)
+    print(f"Sorted logs count: {sorted_logs}\n")
+
+    print("--- Filtered/Sorted Logs ---")
     print_logs(logs)
 
 
