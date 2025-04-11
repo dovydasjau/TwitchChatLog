@@ -23,11 +23,16 @@ def filter_by_user(logs, username):
 def filter_by_text(logs, text):
     filtered = []
     count = 0
+
+    # Match the exact emote/word with custom boundaries
+    pattern = r'(?<!\w)' + re.escape(text) + r'(?!\w)'
+
     for log in logs:
-        matches = re.findall(re.escape(text), log["message"], re.IGNORECASE)
+        matches = re.findall(pattern, log["message"], re.IGNORECASE)
         if matches:
             count += len(matches)
             filtered.append(log)
+
     return filtered, count
 
 
@@ -61,10 +66,10 @@ def run_filter_menu(logs):
             filtered_logs = filter_by_user(filtered_logs, username)
             print(f"Filtered logs count: {len(filtered_logs)}")
         elif choice == "3":
-            text = input("Enter the text to filter messages by: ").strip()
+            text = input("Enter the emote/text to filter messages by: ").strip()
             filtered_logs, word_count = filter_by_text(logs, text)
             print(f"Filtered logs count: {len(filtered_logs)}")
-            print(f'The word/phrase "{text}" appeared {word_count} time(s) in total.')
+            print(f'The word/phrase "{text}" appeared {word_count} time(s) in total (exact matches only).')
         elif choice == "4":
             print("Exiting...")
             break
