@@ -20,18 +20,28 @@ def filter_by_user(logs, username):
     return [log for log in logs if log["user"].lower() == username.lower()]
 
 
-def filter_by_text(logs, text):
+def filter_by_exact_text(logs, text):
     filtered = []
     count = 0
 
     # Match the exact emote/word using custom boundaries
-    # We'll match when the text is:
-    # - at the beginning of message, or preceded by a space
-    # - at the end of message, or followed by a space
     pattern = r'(?:(?<=^)|(?<=\s))' + re.escape(text) + r'(?:(?=\s)|(?=$))'
 
     for log in logs:
         matches = re.findall(pattern, log["message"], re.IGNORECASE)
+        if matches:
+            count += len(matches)
+            filtered.append(log)
+
+    return filtered, count
+
+
+def filter_by_fuzzy_text(logs, text):
+    filtered = []
+    count = 0
+
+    for log in logs:
+        matches = re.findall(re.escape(text), log["message"], re.IGNORECASE)
         if matches:
             count += len(matches)
             filtered.append(log)
@@ -52,12 +62,13 @@ def run_filter_menu(logs):
     while True:
         print(f"\nTotal logs count: {len(logs)}")
 
-        print("\nHow would you like to sort/filter the chat logs?")
+        print("\nWhat would you like to do with the chat logs?")
         print("1 - Sort by time")
-        print("2 - Filter by username")
-        print("3 - Filter by text in message")
-        print("4 - Exit")
-        choice = input("Enter your choice (1/2/3/4): ").strip()
+        print("2 - Filter by exact username")
+        print("3 - Filter by exact phrase/emote")
+        print("4 - Filter by general text match")
+        print("5 - Exit")
+        choice = input("Enter your choice (1/2/3/4/5): ").strip()
 
         filtered_logs = logs
 
@@ -69,11 +80,16 @@ def run_filter_menu(logs):
             filtered_logs = filter_by_user(filtered_logs, username)
             print(f"Filtered logs count: {len(filtered_logs)}")
         elif choice == "3":
-            text = input("Enter the emote/text to filter messages by: ").strip()
-            filtered_logs, word_count = filter_by_text(logs, text)
+            text = input("Enter the exact phrase/emote to search: ").strip()
+            filtered_logs, word_count = filter_by_exact_text(logs, text)
             print(f"Filtered logs count: {len(filtered_logs)}")
-            print(f'The word/phrase "{text}" appeared {word_count} time(s) in total (exact matches only).')
+            print(f'The word/phrase "{text}" appeared {word_count} time(s) (exact match only).')
         elif choice == "4":
+            text = input("Enter the general text to search (will match anything containing this): ").strip()
+            filtered_logs, word_count = filter_by_fuzzy_text(logs, text)
+            print(f"Filtered logs count: {len(filtered_logs)}")
+            print(f'The text "{text}" appeared {word_count} time(s) (partial match).')
+        elif choice == "5":
             print("Exiting...")
             break
         else:
