@@ -24,8 +24,11 @@ def filter_by_text(logs, text):
     filtered = []
     count = 0
 
-    # Match the exact emote/word with custom boundaries
-    pattern = r'(?<!\w)' + re.escape(text) + r'(?!\w)'
+    # Match the exact emote/word using custom boundaries
+    # We'll match when the text is:
+    # - at the beginning of message, or preceded by a space
+    # - at the end of message, or followed by a space
+    pattern = r'(?:(?<=^)|(?<=\s))' + re.escape(text) + r'(?:(?=\s)|(?=$))'
 
     for log in logs:
         matches = re.findall(pattern, log["message"], re.IGNORECASE)
