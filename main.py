@@ -1,10 +1,11 @@
 import re
+import os
 
 # Define the log entry format
 LOG_PATTERN = re.compile(r"\[(\d{2}:\d{2}:\d{2})] (\w+): (.+)")
 
 
-def load_logs(file_path):
+def load_single_log(file_path):
     with open(file_path, "r", encoding="utf-8") as file:
         lines = file.readlines()
     logs = []
@@ -16,6 +17,23 @@ def load_logs(file_path):
     return logs
 
 
+def load_logs_from_path(path):
+    all_logs = []
+    if os.path.isfile(path) and path.endswith(".log"):
+        print(f"Loading log file: {path}")
+        all_logs.extend(load_single_log(path))
+    elif os.path.isdir(path):
+        print(f"Loading all .log files from folder: {path}")
+        for filename in os.listdir(path):
+            if filename.endswith(".log"):
+                full_path = os.path.join(path, filename)
+                print(f" - {filename}")
+                all_logs.extend(load_single_log(full_path))
+    else:
+        raise FileNotFoundError("Invalid file or folder path.")
+    return all_logs
+
+
 def filter_by_user(logs, username):
     return [log for log in logs if log["user"].lower() == username.lower()]
 
@@ -23,29 +41,23 @@ def filter_by_user(logs, username):
 def filter_by_exact_text(logs, text):
     filtered = []
     count = 0
-
-    # Match the exact emote/word using custom boundaries
     pattern = r'(?:(?<=^)|(?<=\s))' + re.escape(text) + r'(?:(?=\s)|(?=$))'
-
     for log in logs:
         matches = re.findall(pattern, log["message"], re.IGNORECASE)
         if matches:
             count += len(matches)
             filtered.append(log)
-
     return filtered, count
 
 
 def filter_by_fuzzy_text(logs, text):
     filtered = []
     count = 0
-
     for log in logs:
         matches = re.findall(re.escape(text), log["message"], re.IGNORECASE)
         if matches:
             count += len(matches)
             filtered.append(log)
-
     return filtered, count
 
 
@@ -99,19 +111,22 @@ def run_filter_menu(logs):
         print("\n--- Filtered/Sorted Logs ---")
         print_logs(filtered_logs)
 
-        again = input("\nWould you like to run another filter/sort on the same file? (y/n): ").strip().lower()
+        again = input("\nWould you like to run another filter/sort on the same file(s)? (y/n): ").strip().lower()
         if again != 'y':
             print("Goodbye!")
             break
 
 
 def main():
-    file_path = input("Enter the path to your .log file: ").strip()
+    path = input("Enter the path to your .log file or folder: ").strip()
     try:
-        logs = load_logs(file_path)
-        run_filter_menu(logs)
-    except FileNotFoundError:
-        print("File not found. Please check the path and try again.")
+        logs = load_logs_from_path(path)
+        if logs:
+            run_filter_menu(logs)
+        else:
+            print("No valid log entries found.")
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
 
 
 if __name__ == "__main__":
