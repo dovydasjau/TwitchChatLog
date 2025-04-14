@@ -1,7 +1,6 @@
 import re
 import os
 
-# Define the log entry format
 LOG_PATTERN = re.compile(r"\[(\d{2}:\d{2}:\d{2})] (\w+): (.+)")
 
 
@@ -50,19 +49,11 @@ def filter_by_exact_text(logs, text):
     return filtered, count
 
 
-def filter_by_fuzzy_text(logs, text):
-    filtered = []
-    count = 0
-    for log in logs:
-        matches = re.findall(re.escape(text), log["message"], re.IGNORECASE)
-        if matches:
-            count += len(matches)
-            filtered.append(log)
-    return filtered, count
+def filter_by_time_range(logs, start_time=None, end_time=None):
+    def in_range(time_str):
+        return (not start_time or time_str >= start_time) and (not end_time or time_str <= end_time)
 
-
-def sort_by_time(logs):
-    return sorted(logs, key=lambda x: x["time"])
+    return [log for log in logs if in_range(log["time"])]
 
 
 def print_logs(logs):
@@ -73,45 +64,44 @@ def print_logs(logs):
 def run_filter_menu(logs):
     while True:
         print(f"\nTotal logs count: {len(logs)}")
+        print("\nChoose one or more filters to apply:")
+        print("1 - Filter by username")
+        print("2 - Filter by exact emote/word")
+        print("3 - Filter by time range")
+        print("4 - Exit")
+        choice = input("Enter your filter option(s) (e.g., 1 2 3): ").strip()
 
-        print("\nWhat would you like to do with the chat logs?")
-        print("1 - Sort by time")
-        print("2 - Filter by exact username")
-        print("3 - Filter by exact phrase/emote")
-        print("4 - Filter by general text match")
-        print("5 - Exit")
-        choice = input("Enter your choice (1/2/3/4/5): ").strip()
-
-        filtered_logs = logs
-
-        if choice == "1":
-            filtered_logs = sort_by_time(filtered_logs)
-            print(f"Sorted logs count: {len(filtered_logs)}")
-        elif choice == "2":
-            username = input("Enter the username to filter by: ").strip()
-            filtered_logs = filter_by_user(filtered_logs, username)
-            print(f"Filtered logs count: {len(filtered_logs)}")
-        elif choice == "3":
-            text = input("Enter the exact phrase/emote to search: ").strip()
-            filtered_logs, word_count = filter_by_exact_text(logs, text)
-            print(f"Filtered logs count: {len(filtered_logs)}")
-            print(f'The word/phrase "{text}" appeared {word_count} time(s) (exact match only).')
-        elif choice == "4":
-            text = input("Enter the general text to search (will match anything containing this): ").strip()
-            filtered_logs, word_count = filter_by_fuzzy_text(logs, text)
-            print(f"Filtered logs count: {len(filtered_logs)}")
-            print(f'The text "{text}" appeared {word_count} time(s) (partial match).')
-        elif choice == "5":
+        if choice == "4":
             print("Exiting...")
             break
-        else:
-            print("Invalid choice. Try again.")
-            continue
 
-        print("\n--- Filtered/Sorted Logs ---")
+        options = choice.split()
+        filters = set(options)
+        filtered_logs = logs
+        word_count = 0
+
+        if "1" in filters:
+            username = input("Enter the username to filter by: ").strip()
+            filtered_logs = filter_by_user(filtered_logs, username)
+
+        if "2" in filters:
+            text = input("Enter the exact emote/word to search for: ").strip()
+            filtered_logs, word_count = filter_by_exact_text(filtered_logs, text)
+
+        if "3" in filters:
+            print("Enter time range (24h format HH:MM:SS). Leave blank to skip either.")
+            start = input("Start time (e.g., 14:00:00): ").strip() or None
+            end = input("End time (e.g., 15:30:00): ").strip() or None
+            filtered_logs = filter_by_time_range(filtered_logs, start, end)
+
+        print(f"\nFiltered logs count: {len(filtered_logs)}")
+        if "2" in filters:
+            print(f'The word/phrase "{text}" appeared {word_count} time(s) (exact match only).')
+
+        print("\n--- Filtered Logs ---")
         print_logs(filtered_logs)
 
-        again = input("\nWould you like to run another filter/sort on the same file(s)? (y/n): ").strip().lower()
+        again = input("\nWould you like to apply another filter set on the same file(s)? (y/n): ").strip().lower()
         if again != 'y':
             print("Goodbye!")
             break
@@ -131,4 +121,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
