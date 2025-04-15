@@ -4,7 +4,7 @@ import os
 LOG_PATTERN = re.compile(r"\[(\d{2}:\d{2}:\d{2})] (\w+): (.+)")
 
 
-def load_single_log(file_path):
+def load_single_log(file_path, source=None):
     with open(file_path, "r", encoding="utf-8") as file:
         lines = file.readlines()
     logs = []
@@ -12,25 +12,35 @@ def load_single_log(file_path):
         match = LOG_PATTERN.match(line.strip())
         if match:
             time, user, message = match.groups()
-            logs.append({"time": time, "user": user, "message": message})
+            logs.append({
+                "time": time,
+                "user": user,
+                "message": message,
+                "source": source or os.path.splitext(os.path.basename(file_path))[0]
+            })
     return logs
 
 
 def load_logs_from_path(path):
     all_logs = []
+    sources = []
     if os.path.isfile(path) and path.endswith(".log"):
         print(f"Loading log file: {path}")
-        all_logs.extend(load_single_log(path))
+        logs = load_single_log(path)
+        all_logs.extend(logs)
+        sources.append(os.path.basename(path))
     elif os.path.isdir(path):
         print(f"Loading all .log files from folder: {path}")
         for filename in os.listdir(path):
             if filename.endswith(".log"):
                 full_path = os.path.join(path, filename)
                 print(f" - {filename}")
-                all_logs.extend(load_single_log(full_path))
+                logs = load_single_log(full_path, source=os.path.splitext(filename)[0])
+                all_logs.extend(logs)
+                sources.append(filename)
     else:
         raise FileNotFoundError("Invalid file or folder path.")
-    return all_logs
+    return all_logs, len(set(sources)) > 1  # True if multiple files
 
 
 def filter_by_user(logs, username):
@@ -56,12 +66,13 @@ def filter_by_time_range(logs, start_time=None, end_time=None):
     return [log for log in logs if in_range(log["time"])]
 
 
-def print_logs(logs):
+def print_logs(logs, show_source=False):
     for log in logs:
-        print(f"[{log['time']}] {log['user']}: {log['message']}")
+        source_tag = f"[{log['source']}]" if show_source else ""
+        print(f"[{log['time']}] {source_tag} {log['user']}: {log['message']}")
 
 
-def run_filter_menu(logs):
+def run_filter_menu(logs, show_source=False):
     while True:
         print(f"\nTotal logs count: {len(logs)}")
         print("\nChoose one or more filters to apply:")
@@ -99,7 +110,7 @@ def run_filter_menu(logs):
             print(f'The word/phrase "{text}" appeared {word_count} time(s) (exact match only).')
 
         print("\n--- Filtered Logs ---")
-        print_logs(filtered_logs)
+        print_logs(filtered_logs, show_source)
 
         again = input("\nWould you like to apply another filter set on the same file(s)? (y/n): ").strip().lower()
         if again != 'y':
@@ -110,9 +121,9 @@ def run_filter_menu(logs):
 def main():
     path = input("Enter the path to your .log file or folder: ").strip()
     try:
-        logs = load_logs_from_path(path)
+        logs, multi_file_mode = load_logs_from_path(path)
         if logs:
-            run_filter_menu(logs)
+            run_filter_menu(logs, show_source=multi_file_mode)
         else:
             print("No valid log entries found.")
     except FileNotFoundError as e:
