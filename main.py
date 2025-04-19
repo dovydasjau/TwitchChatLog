@@ -9,9 +9,19 @@ def load_single_log(file_path, source=None):
         lines = file.readlines()
     logs = []
     for line in lines:
-        match = LOG_PATTERN.match(line.strip())
-        if match:
-            time, user, message = match.groups()
+        line = line.strip()
+        time_match = re.match(r"\[(\d{2}:\d{2}:\d{2})] (.+)", line)
+        if time_match:
+            time, rest = time_match.groups()
+            # Check for normal message
+            msg_match = re.match(r"(\w+): (.+)", rest)
+            if msg_match:
+                user, message = msg_match.groups()
+            else:
+                # System message (e.g., "hunt4rival has been timed out...")
+                user_match = rest.split(' ', 1)[0]
+                user = user_match
+                message = rest
             logs.append({
                 "time": time,
                 "user": user,
