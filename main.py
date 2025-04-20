@@ -79,7 +79,8 @@ def filter_by_time_range(logs, start_time=None, end_time=None):
 def print_logs(logs, show_source=False):
     for log in logs:
         source_tag = f"[{log['source']}]" if show_source else ""
-        print(f"[{log['time']}] {source_tag} {log['user']}: {log['message']}")
+        source_display = f"[{log['source']}] " if show_source else ""
+        print(f"[{log['time']}] {source_display}{log['user']}: {log['message']}")
 
 
 def run_filter_menu(logs, show_source=False):
