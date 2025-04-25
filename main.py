@@ -13,12 +13,10 @@ def load_single_log(file_path, source=None):
         time_match = re.match(r"\[(\d{2}:\d{2}:\d{2})] (.+)", line)
         if time_match:
             time, rest = time_match.groups()
-            # Check for normal message
             msg_match = re.match(r"(\w+): (.+)", rest)
             if msg_match:
                 user, message = msg_match.groups()
             else:
-                # System message (e.g., "hunt4rival has been timed out...")
                 user_match = rest.split(' ', 1)[0]
                 user = user_match
                 message = rest
@@ -78,9 +76,19 @@ def filter_by_time_range(logs, start_time=None, end_time=None):
 
 def print_logs(logs, show_source=False):
     for log in logs:
-        source_tag = f"[{log['source']}]" if show_source else ""
         source_display = f"[{log['source']}] " if show_source else ""
         print(f"[{log['time']}] {source_display}{log['user']}: {log['message']}")
+
+
+def print_summary(original_count, filtered_count, filters_used, search_text=None, word_count=None):
+    print("\n--- Summary ---")
+    print(f"Original logs count: {original_count}")
+    print(f"Filtered logs count: {filtered_count}")
+    print(f"Applied filters: {', '.join(filters_used) if filters_used else 'None'}")
+    if search_text:
+        print(f'Searched for word/emote: "{search_text}"')
+    if word_count is not None:
+        print(f'Matches found: {word_count} exact match(es)')
 
 
 def run_filter_menu(logs, show_source=False):
@@ -101,27 +109,33 @@ def run_filter_menu(logs, show_source=False):
         filters = set(options)
         filtered_logs = logs
         word_count = 0
+        search_text = None
+        filters_used = []
 
         if "1" in filters:
             username = input("Enter the username to filter by: ").strip()
             filtered_logs = filter_by_user(filtered_logs, username)
+            filters_used.append(f'Username = "{username}"')
 
         if "2" in filters:
-            text = input("Enter the exact emote/word to search for: ").strip()
-            filtered_logs, word_count = filter_by_exact_text(filtered_logs, text)
+            search_text = input("Enter the exact emote/word to search for: ").strip()
+            filtered_logs, word_count = filter_by_exact_text(filtered_logs, search_text)
+            filters_used.append(f'Exact word = "{search_text}"')
 
         if "3" in filters:
             print("Enter time range (24h format HH:MM:SS). Leave blank to skip either.")
             start = input("Start time (e.g., 14:00:00): ").strip() or None
             end = input("End time (e.g., 15:30:00): ").strip() or None
             filtered_logs = filter_by_time_range(filtered_logs, start, end)
-
-        print(f"\nFiltered logs count: {len(filtered_logs)}")
-        if "2" in filters:
-            print(f'The word/phrase "{text}" appeared {word_count} time(s) (exact match only).')
+            time_desc = f"Time Range: "
+            if start: time_desc += f"From {start} "
+            if end: time_desc += f"To {end}"
+            filters_used.append(time_desc.strip())
 
         print("\n--- Filtered Logs ---")
         print_logs(filtered_logs, show_source)
+
+        print_summary(len(logs), len(filtered_logs), filters_used, search_text, word_count)
 
         again = input("\nWould you like to apply another filter set on the same file(s)? (y/n): ").strip().lower()
         if again != 'y':
