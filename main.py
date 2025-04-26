@@ -55,16 +55,23 @@ def filter_by_user(logs, username):
     return [log for log in logs if log["user"].lower() == username.lower()]
 
 
-def filter_by_exact_text(logs, text):
+def filter_by_exact_text(logs, text, case_sensitive=False):
     filtered = []
     count = 0
-    pattern = r'(?:(?<=^)|(?<=\s))' + re.escape(text) + r'(?:(?=\s)|(?=$))'
+    if case_sensitive:
+        pattern = r'(?:(?<=^)|(?<=\s))' + re.escape(text) + r'(?:(?=\s)|(?=$))'
+        flags = 0
+    else:
+        pattern = r'(?:(?<=^)|(?<=\s))' + re.escape(text) + r'(?:(?=\s)|(?=$))'
+        flags = re.IGNORECASE
+
     for log in logs:
-        matches = re.findall(pattern, log["message"], re.IGNORECASE)
+        matches = re.findall(pattern, log["message"], flags)
         if matches:
             count += len(matches)
             filtered.append(log)
     return filtered, count
+
 
 
 def filter_by_time_range(logs, start_time=None, end_time=None):
@@ -99,14 +106,24 @@ def run_filter_menu(logs, show_source=False):
         print("2 - Filter by exact emote/word")
         print("3 - Filter by time range")
         print("4 - Exit")
-        choice = input("Enter your filter option(s) (e.g., 1 2 3): ").strip()
+        choice = input("Enter your filter option(s) (e.g., 1 2 3 or 1 2y 3): ").strip()
 
         if choice == "4":
             print("Exiting...")
             break
 
         options = choice.split()
-        filters = set(options)
+        filters = set()
+        case_sensitive = False
+
+        # Handle case sensitivity for exact match
+        for opt in options:
+            if opt == "2y":
+                filters.add("2")
+                case_sensitive = True
+            else:
+                filters.add(opt)
+
         filtered_logs = logs
         word_count = 0
         search_text = None
@@ -119,8 +136,8 @@ def run_filter_menu(logs, show_source=False):
 
         if "2" in filters:
             search_text = input("Enter the exact emote/word to search for: ").strip()
-            filtered_logs, word_count = filter_by_exact_text(filtered_logs, search_text)
-            filters_used.append(f'Exact word = "{search_text}"')
+            filtered_logs, word_count = filter_by_exact_text(filtered_logs, search_text, case_sensitive=case_sensitive)
+            filters_used.append(f'Exact word = "{search_text}"' + (" (case-sensitive)" if case_sensitive else ""))
 
         if "3" in filters:
             print("Enter time range (24h format HH:MM:SS). Leave blank to skip either.")
@@ -141,6 +158,7 @@ def run_filter_menu(logs, show_source=False):
         if again != 'y':
             print("Goodbye!")
             break
+
 
 
 def main():
