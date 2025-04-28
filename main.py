@@ -4,6 +4,24 @@ import os
 LOG_PATTERN = re.compile(r"\[(\d{2}:\d{2}:\d{2})] (\w+): (.+)")
 
 
+# System messages that shouldn't be counted as real chat messages
+SYSTEM_MESSAGES = [
+    ("connected", "connected"),
+    ("joined", "joined channel"),
+    ("disconnected", "disconnected"),
+    ("server", "server connection timed out, reconnecting"),
+    ("twitch", "twitch servers requested us to reconnect, reconnecting"),
+]
+
+def is_system_message(log):
+    user = log['user'].strip().lower()
+    message = log['message'].strip().lower()
+    for sys_user, sys_message in SYSTEM_MESSAGES:
+        if user == sys_user and message == sys_message:
+            return True
+    return False
+
+
 def load_single_log(file_path, source=None):
     with open(file_path, "r", encoding="utf-8") as file:
         lines = file.readlines()
@@ -131,7 +149,7 @@ def run_filter_menu(logs, show_source=False):
             else:
                 filters.add(opt)
 
-        filtered_logs = logs
+        filtered_logs = [log for log in logs if not is_system_message(log)]
         word_count = 0
         search_text = None
         filters_used = []
