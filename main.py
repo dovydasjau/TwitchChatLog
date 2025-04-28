@@ -83,7 +83,14 @@ def filter_by_time_range(logs, start_time=None, end_time=None):
 
 def print_logs(logs, show_source=False):
     for log in logs:
-        source_display = f"[{log['source']}] " if show_source else ""
+        if show_source and log['source']:
+            # Remove everything before the last dash to get just the date
+            if '-' in log['source']:
+                source_display = f"[{log['source'].split('-', 1)[-1]}] "
+            else:
+                source_display = f"[{log['source']}] "
+        else:
+            source_display = ""
         print(f"[{log['time']}] {source_display}{log['user']}: {log['message']}")
 
 
